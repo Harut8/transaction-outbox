@@ -7,15 +7,18 @@ from outbox import OutBoxService
 from schedule import celery_app
 
 
+async def publish_and_update(msg: OutboxMessage, session):
+    await OutBoxService.publish_messages(msg.payload, msg.routing_key)
+    await OutBoxService.update(msg, session)
+
+
 async def publish_messages_function():
-    async with DbHelper.scoped_session() as session:
-        stmt = select(OutboxMessage).where(OutboxMessage.status == OutboxStatus.PENDING)
-        messages = await session.execute(stmt)
-        messages = messages.scalars().all()
-        for msg in messages:
-            await OutBoxService.publish_messages(msg.payload, msg.routing_key)
-            msg.status = OutboxStatus.PROCESSED
-            await session.commit()
+    with asyncio.Lock():
+        async with DbHelper.scoped_session() as session:
+            stmt = select(OutboxMessage).where(OutboxMessage.status == OutboxStatus.PENDING)
+            messages = await session.execute(stmt)
+            messages = messages.scalars().all()
+            await asyncio.gather(*[publish_and_update(msg, session) for msg in messages])
 
 
 @celery_app.task(bind=True, name="outbox.publish_messages")
