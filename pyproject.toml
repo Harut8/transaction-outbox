@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "transact-inbox"
+version = "0.1.0"
+description = ""
+authors = ["Harut <har.avetisyan2002@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.25"}
+aio-pika = "^9.3.1"
+celery = "^5.3.6"
+asgiref = "^3.7.2"
+asyncpg = "^0.29.0"
+redis = "^5.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

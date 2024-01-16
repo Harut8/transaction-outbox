@@ -1,0 +1,69 @@
+version: "3.11"
+services:
+    outbox:
+        container_name: outbox
+        build: .
+        command: celery -A schedule:celery_app beat -l info
+        volumes:
+            - .:/app
+        depends_on:
+            - redis
+            - worker
+            - rabbitmq
+        networks:
+            - base_carcas_backend
+    worker:
+        container_name: worker
+        restart: on-failure
+        build: .
+        command: celery -A schedule:celery_app worker -l info
+        volumes:
+            - .:/app
+        depends_on:
+            - redis
+            - rabbitmq
+        networks:
+            - base_carcas_backend
+    rabbitmq:
+        hostname: rabbitmq
+        image: rabbitmq:management
+
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        environment:
+            - RABBITMQ_DEFAULT_USER=guest
+            - RABBITMQ_DEFAULT_PASS=guest
+        networks:
+            - base_carcas_backend
+
+
+    redis:
+        image: redis:7.2
+        hostname: redis
+        volumes:
+            - redis:/data
+        networks:
+            - base_carcas_backend
+
+
+    flower:
+        image: mher/flower
+        ports:
+            - "5555:5555"
+        environment:
+            - CELERY_BROKER_URL=redis://redis:6379/0
+            - CELERY_RESULT_BACKEND=redis://redis:6379/0
+        depends_on:
+            - redis
+            - outbox
+        networks:
+            - base_carcas_backend
+
+volumes:
+    redis:
+
+
+networks:
+    base_carcas_backend:
+        external: true
